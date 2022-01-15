@@ -61,8 +61,8 @@ async def echo(event):
                         filename = getFilename(event)
                         await response.answer()
                         await response.reply("Download started!")
-                        path = "{0}/{1}".format(config["download_folder"],filename
-                        await bot.download_media(event.message, path), progress_callback = download_callback)
+                        path = "{0}/{1}".format(config["download_folder"],filename)
+                        await bot.download_media(event.message, path, progress_callback = download_callback)
                         id = radarr.addToLibrary(search_result['tmdbId'], "/movies")
                         radarr.manualImport(path, id)
                         await conv.send_message("Download complete! {0} is now added to Radarr".format(search_result["title"]))
