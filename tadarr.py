@@ -45,28 +45,30 @@ async def echo(event):
             filename = getFilename(event)
             search_results = radarr.search(filename)
             entity = await bot.get_entity(event.chat_id)
+            movie_data = radarr.giveTitles(search_results)
             async with bot.conversation(entity) as conv:
-                for idx, search_result in enumerate(search_results):
+                for idx, movie in enumerate(movie_data):
                     await conv.send_message("Is this the movie which you are trying to add?")
-                    await conv.send_file(search_result['images'][0]['remoteUrl'])
-                    await conv.send_message("Is this the movie which you are trying to add?")
-                    if idx < len(search_results)-1:
-                        await conv.send_message(search_result['title'],buttons=[Button.inline('Yes', b'yes')])
+                    await conv.send_file(movie['poster'])
+                    if idx <= len(search_results)-1:
+                        await conv.send_message("{} ({})".format(movie['title'], movie['year']),buttons=[Button.inline('Yes', b'yes')])
                     else:
-                        await conv.send_message(search_result['title'],buttons=[Button.inline('Yes', b'yes'),Button.inline('No, show next', b'no')])
+                        await conv.send_message("{} ({})".format(movie['title'], movie['year']), buttons=[Button.inline('Yes', b'yes'),Button.inline('No, show next', b'no')])
                     response = await conv.wait_event(events.CallbackQuery())
                     if response.data == b'yes':
-                        if(radarr.inLibrary(search_result['tmdbId'])):
+                        if(radarr.inLibrary(movie['tmdbId'])):
                             await conv.send_message("This movie already exists in the Library")
                         filename = getFilename(event)
                         await response.answer()
                         await response.reply("Download started!")
                         path = "{0}/{1}".format(config["download_folder"],filename)
                         await bot.download_media(event.message, path, progress_callback = download_callback)
-                        id = radarr.addToLibrary(search_result['tmdbId'], "/movies")
+                        id = radarr.addToLibrary(movie['tmdbId'], "/movies")
                         radarr.manualImport(path, id)
-                        await conv.send_message("Download complete! {0} is now added to Radarr".format(search_result["title"]))
+                        await conv.send_message("Download complete! {0} is now added to Radarr".format(movie["title"]))
                         break
+                    if response.data == b'no':
+                        await response.answer()
 
 def main():
     bot.run_until_disconnected()
