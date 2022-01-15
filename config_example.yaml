@@ -1,0 +1,18 @@
+radarr:
+  server:
+    addr: 
+    port : 7878 # Default is 7878
+    path: / # Default is / . If set, it must start and finish with / . Eg: /radarr/
+    ssl: false #default false
+  auth:
+    apikey: 
+    username:
+    password: 
+  qualityProfileId: 6
+
+#Telegram Configuration
+telegram:
+  token: 
+  password: 
+  client_id: 
+  client_secret: 
