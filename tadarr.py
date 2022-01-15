@@ -4,10 +4,13 @@ from telethon.tl.custom.button import Button
 from mimetypes import guess_extension
 import radarr
 from config import config
+from asyncio.exceptions import TimeoutError
 
 config = config["telegram"]
 
 bot = TelegramClient('bot', config['client_id'], config['client_secret']).start(bot_token=config['token'])
+
+DOWNLOAD_PATH="/dowloads"
 
 
 @bot.on(events.NewMessage(pattern='/start'))
@@ -47,28 +50,31 @@ async def echo(event):
             entity = await bot.get_entity(event.chat_id)
             movie_data = radarr.giveTitles(search_results)
             async with bot.conversation(entity) as conv:
-                for idx, movie in enumerate(movie_data):
-                    await conv.send_message("Is this the movie which you are trying to add?")
-                    await conv.send_file(movie['poster'])
-                    if idx <= len(search_results)-1:
-                        await conv.send_message("{} ({})".format(movie['title'], movie['year']),buttons=[Button.inline('Yes', b'yes')])
-                    else:
-                        await conv.send_message("{} ({})".format(movie['title'], movie['year']), buttons=[Button.inline('Yes', b'yes'),Button.inline('No, show next', b'no')])
-                    response = await conv.wait_event(events.CallbackQuery())
-                    if response.data == b'yes':
-                        if(radarr.inLibrary(movie['tmdbId'])):
-                            await conv.send_message("This movie already exists in the Library")
-                        filename = getFilename(event)
-                        await response.answer()
-                        await response.reply("Download started!")
-                        path = "{0}/{1}".format(config["download_folder"],filename)
-                        await bot.download_media(event.message, path, progress_callback = download_callback)
-                        id = radarr.addToLibrary(movie['tmdbId'], "/movies")
-                        radarr.manualImport(path, id)
-                        await conv.send_message("Download complete! {0} is now added to Radarr".format(movie["title"]))
-                        break
-                    if response.data == b'no':
-                        await response.answer()
+                try:
+                    for idx, movie in enumerate(movie_data):
+                        await conv.send_message("Is this the movie which you are trying to add?")
+                        await conv.send_file(movie['poster'])
+                        if idx <= len(search_results)-1:
+                            await conv.send_message("{} ({})".format(movie['title'], movie['year']),buttons=[Button.inline('Yes', b'yes')])
+                        else:
+                            await conv.send_message("{} ({})".format(movie['title'], movie['year']), buttons=[Button.inline('Yes', b'yes'),Button.inline('No, show next', b'no')])
+                        response = await conv.wait_event(events.CallbackQuery())
+                        if response.data == b'yes':
+                            if(radarr.inLibrary(movie['id'])):
+                                await conv.send_message("This movie already exists in the Library")
+                            filename = getFilename(event)
+                            await response.answer()
+                            await response.reply("Download started!")
+                            path = "{0}/{1}".format(DOWNLOAD_PATH,filename)
+                            await bot.download_media(event.message, path, progress_callback = download_callback)
+                            id = radarr.addToLibrary(movie['id'], "/movies")
+                            radarr.manualImport(path, id)
+                            await conv.send_message("Download complete! {0} is now added to Radarr".format(movie["title"]))
+                            break
+                        if response.data == b'no':
+                            await response.answer()
+                except TimeoutError:
+                    await conv.send_message("Timeout. Please send again.")
 
 def main():
     bot.run_until_disconnected()
