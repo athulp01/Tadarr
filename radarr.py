@@ -6,12 +6,11 @@ import logging
 import requests
 
 import commons as commons
-import logger
 from config import config
 
 # Set up logging
 logLevel = logging.DEBUG if config.get("debugLogging", False) else logging.INFO
-logger = logger.getLogger("addarr.radarr", logLevel, config.get("logToConsole", False))
+logger = logging.getLogger("tadarr")
 
 config = config["radarr"]
 
@@ -41,7 +40,6 @@ def giveTitles(parsed_json):
                 }
             )
     return data
-
 
 def inLibrary(tmdbId):
     parameters = {}

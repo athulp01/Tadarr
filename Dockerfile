@@ -2,10 +2,12 @@ FROM python:alpine
 
 WORKDIR /app
 
+RUN apk add --no-cache gcc musl-dev libffi-dev
 # Copy files to container
 COPY . /app
 
-# Install ans build Addarr requirements, make symlink to redirect logs to stdout
 RUN	pip install --no-cache-dir -r requirements.txt --upgrade
+
+RUN apk del gcc musl-dev libffi-dev
 
 ENTRYPOINT ["python", "/app/tadarr.py"]

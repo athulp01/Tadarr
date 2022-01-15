@@ -1,0 +1,10 @@
+version: '3'
+services:
+  tadarr:
+    container_name: tadarr
+    image: athulp01/tadarr
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+    - ./config.yaml:/app/config.yaml:ro
+    - /home/pi/downloads:/downloads
