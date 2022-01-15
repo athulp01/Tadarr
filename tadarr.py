@@ -56,6 +56,8 @@ async def echo(event):
                         await conv.send_message(search_result['title'],buttons=[Button.inline('Yes', b'yes'),Button.inline('No, show next', b'no')])
                     response = await conv.wait_event(events.CallbackQuery())
                     if response.data == b'yes':
+                        if(radarr.inLibrary(search_result['tmdbId'])):
+                            await conv.send_message("This movie already exists in the Library")
                         filename = getFilename(event)
                         await response.answer()
                         await response.reply("Download started!")
