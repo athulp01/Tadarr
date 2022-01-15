@@ -1,0 +1,72 @@
+from telethon import TelegramClient, events
+from telethon.tl.types import DocumentAttributeFilename, DocumentAttributeVideo
+from telethon.tl.custom.button import Button
+from mimetypes import guess_extension
+import radarr
+from config import config
+
+config = config["telegram"]
+
+bot = TelegramClient('bot', config['client_id'], config['client_secret']).start(bot_token=config['token'])
+
+
+@bot.on(events.NewMessage(pattern='/start'))
+async def start(event):
+    await event.respond('Send the movie to add to Radarr!')
+    raise events.StopPropagation
+
+async def set_progress(received, total):
+    print(received, total)
+
+def getFilename(event: events.NewMessage.Event):
+    mediaFileName = "unknown"
+    if hasattr(event.media, 'document'):
+        for attribute in event.media.document.attributes:
+            if isinstance(attribute, DocumentAttributeFilename): 
+              mediaFileName=attribute.file_name
+              break     
+            if isinstance(attribute, DocumentAttributeVideo):
+              if event.original_update.message.message != '': 
+                  mediaFileName = event.original_update.message.message
+              else:    
+                  mediaFileName = str(event.message.media.document.id)
+              mediaFileName+=guess_extension(event.message.media.document.mime_type)    
+     
+    mediaFileName="".join(c for c in mediaFileName if c.isalnum() or c in "()._- ")
+      
+    return mediaFileName
+
+
+@bot.on(events.NewMessage)
+async def echo(event):
+    download_callback = lambda received, total: set_progress(received, total)
+    if event.media:
+        if hasattr(event.media, 'document'):
+            filename = getFilename(event)
+            search_results = radarr.search(filename)
+            entity = await bot.get_entity(event.chat_id)
+            async with bot.conversation(entity) as conv:
+                for idx, search_result in enumerate(search_results):
+                    await conv.send_message("Is this the movie which you are trying to add?")
+                    await conv.send_file(search_result['images'][0]['remoteUrl'])
+                    await conv.send_message("Is this the movie which you are trying to add?")
+                    if idx < len(search_results)-1:
+                        await conv.send_message(search_result['title'],buttons=[Button.inline('Yes', b'yes')])
+                    else:
+                        await conv.send_message(search_result['title'],buttons=[Button.inline('Yes', b'yes'),Button.inline('No, show next', b'no')])
+                    response = await conv.wait_event(events.CallbackQuery())
+                    if response.data == b'yes':
+                        filename = getFilename(event)
+                        await response.answer()
+                        await response.reply("Download started!")
+                        await bot.download_media(event.message, "{0}/{1}".format("./",filename), progress_callback = download_callback)
+                        id = radarr.addToLibrary(search_result['tmdbId'], "/movies")
+                        radarr.manualImport("{0}/{1}".format("/movies",filename), id)
+                        await conv.send_message("Download complete! {0} is now added to Radarr".format(search_result["title"]))
+                        break
+
+def main():
+    bot.run_until_disconnected()
+
+if __name__ == '__main__':
+    main()
