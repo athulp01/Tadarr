@@ -1,16 +1,21 @@
 from telethon import TelegramClient, events
+from telethon.events import common
 from telethon.tl.types import DocumentAttributeFilename, DocumentAttributeVideo
 from telethon.tl.custom.button import Button
 from mimetypes import guess_extension
 import radarr
 from config import config
 from asyncio.exceptions import TimeoutError
+from commons import format_bytes
+
+DOWNLOAD_PATH=config["radarr"]["download_folder"]
 
 config = config["telegram"]
 
 bot = TelegramClient('bot', config['client_id'], config['client_secret']).start(bot_token=config['token'])
 
-DOWNLOAD_PATH="/dowloads"
+
+progress = {}
 
 
 @bot.on(events.NewMessage(pattern='/start'))
@@ -18,8 +23,15 @@ async def start(event):
     await event.respond('Send the movie to add to Radarr!')
     raise events.StopPropagation
 
-async def set_progress(received, total):
-    print(received, total)
+@bot.on(events.NewMessage(pattern='/progress'))
+async def start(event):
+    for _, value in progress.items():
+        await event.respond("{} - {}/{} downloaded".format(value[2]["title"], format_bytes(value[0]), format_bytes(value[1])))
+
+
+
+async def set_progress(movie, received, total):
+    progress[movie["id"]] = (received, total, movie)
 
 def getFilename(event: events.NewMessage.Event):
     mediaFileName = "unknown"
@@ -42,7 +54,6 @@ def getFilename(event: events.NewMessage.Event):
 
 @bot.on(events.NewMessage)
 async def echo(event):
-    download_callback = lambda received, total: set_progress(received, total)
     if event.media:
         if hasattr(event.media, 'document'):
             filename = getFilename(event)
@@ -66,7 +77,9 @@ async def echo(event):
                             await response.answer()
                             await response.reply("Download started!")
                             path = "{0}/{1}".format(DOWNLOAD_PATH,filename)
+                            download_callback = lambda received, total: set_progress(movie, received, total)
                             await bot.download_media(event.message, path, progress_callback = download_callback)
+                            del progress[movie["id"]]
                             id = radarr.addToLibrary(movie['id'], "/movies")
                             radarr.manualImport(path, id)
                             await conv.send_message("Download complete! {0} is now added to Radarr".format(movie["title"]))

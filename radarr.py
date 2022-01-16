@@ -89,7 +89,7 @@ def buildImportData(path, id):
 def buildData(json, path):
     built_data = {
         "qualityProfileId": config["qualityProfileId"],
-        "minimumAvailability": config["minimumAvailability"],
+        "minimumAvailability": "announced",
         "rootFolderPath": path,  # config["rootFolder"],
         "addOptions": {"searchForMovie": False},
     }
