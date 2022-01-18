@@ -14,6 +14,9 @@ logger = logging.getLogger("tadarr")
 
 config = config["radarr"]
 
+addMovieNeededFields = ["tmdbId", "year", "title", "titleSlug", "images"]
+
+
 def search(title):
     parameters = {"term": title}
     req = requests.get(commons.generateApiQuery("radarr", "movie/lookup", parameters))
@@ -23,6 +26,7 @@ def search(title):
         return parsed_json
     else:
         return False
+
 
 def giveTitles(parsed_json):
     data = []
@@ -40,6 +44,7 @@ def giveTitles(parsed_json):
                 }
             )
     return data
+
 
 def inLibrary(tmdbId):
     parameters = {}
@@ -89,7 +94,7 @@ def buildImportData(path, id):
 def buildData(json, path):
     built_data = {
         "qualityProfileId": config["qualityProfileId"],
-        "minimumAvailability": "announced",
+        "minimumAvailability": config["minimumAvailability"],
         "rootFolderPath": path,  # config["rootFolder"],
         "addOptions": {"searchForMovie": False},
     }
