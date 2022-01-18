@@ -2,7 +2,7 @@ version: '3'
 services:
   tadarr:
     container_name: tadarr
-    image: ghcr.io/athulp01/tadarr:master
+    image: athulp/tadarr
     restart: unless-stopped
     network_mode: host
     volumes:
