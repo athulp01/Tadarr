@@ -56,11 +56,19 @@ def getFilename(event: events.NewMessage.Event):
 async def echo(event):
     if event.media:
         if hasattr(event.media, 'document'):
-            filename = getFilename(event)
-            search_results = radarr.search(filename)
             entity = await bot.get_entity(event.chat_id)
-            movie_data = radarr.giveTitles(search_results)
             async with bot.conversation(entity) as conv:
+                filename = getFilename(event)
+                search_results = radarr.search(filename)
+                if search_results is False:
+                    await conv.send_message("Couldn't determine the movie. Enter the search query manually")
+                    query_resp = await conv.get_response()
+                    query = query_resp.text
+                    search_results = radarr.search(query_resp.text)
+                    if search_results is False:
+                        await conv.send_message("No movies found with the provided query.")
+                        return
+                movie_data = radarr.giveTitles(search_results)
                 try:
                     for idx, movie in enumerate(movie_data):
                         await conv.send_message("Is this the movie which you are trying to add?")
